@@ -168,54 +168,16 @@ class PayloadEnv(object):
             m_payload: float,
             dt: float,
             time_now: float,
-            target_pos: list,
-            target_vel: list,
-            target_ang_vel: list,
-            target_acc: list,
-            target_yaw: list,
-            cog_guess: list
+            follower_thrust_cmds,
+            follower_torque_cmds,
         ):
 
-        if self.debug:
-            # --- Teleport the Virtual Leader Marker ---
-            # We update its position every single frame to match the target math
-            target_orientation = self.pybullet.getQuaternionFromEuler([0.0, 0.0, target_yaw])
-            self.pybullet.resetBasePositionAndOrientation(self.leader_marker_id, target_pos, target_orientation)
-        
         # 1. Read Global Frame State for the Leader
         pos, quat = self.pybullet.getBasePositionAndOrientation(self.robot_id)
         vel, ang_vel = self.pybullet.getBaseVelocity(self.robot_id)
         current_rpy = self.pybullet.getEulerFromQuaternion(quat)
 
-        # 2. Calculate current acceleration and angular acceleration
-        # because pyBullet doesn't provide them out of the box
-        if len(self.log_velocity) == 0:
-            current_acc = (np.array((0.0, 0.0, 0.0)) - np.array(vel)) / dt
-            current_ang_acc = (np.array((0.0, 0.0, 0.0)) - np.array(ang_vel)) / dt
-        else:
-            current_acc = (np.array(self.log_velocity[-1]) - np.array(vel)) / dt
-            current_ang_acc = (np.array(self.log_ang_velocity[-1]) - np.array(ang_vel)) / dt
-
-        follower_thrust_cmds, follower_torque_cmds, acting_force = self.leader.get_follower_commands(
-            self.payload_offset,
-            dt,
-            time_now,
-            pos,
-            current_rpy,
-            vel,
-            ang_vel,
-            current_acc,
-            current_ang_acc,
-            target_pos,
-            target_vel,
-            target_ang_vel,
-            target_acc,
-            target_yaw,
-            cog_guess[0], # cog_guess_x
-            cog_guess[1],
-            m_frame,
-            m_payload,
-        )
+        print(f"follower cmds {follower_thrust_cmds}")
 
         # Update all 4 drones
         for drone in self.drones:
@@ -237,21 +199,8 @@ class PayloadEnv(object):
         # in the above step
         self.log_velocity.append(vel)
         self.log_ang_velocity.append(ang_vel)
-
-        # recalculate the acceleration to be returned
-        if len(self.log_velocity) == 0:
-            current_acc = (np.array((0.0, 0.0, 0.0)) - np.array(vel)) / dt
-            current_ang_acc = (np.array((0.0, 0.0, 0.0)) - np.array(ang_vel)) / dt
-        else:
-            current_acc = (np.array(self.log_velocity[-1]) - np.array(vel)) / dt
-            current_ang_acc = (np.array(self.log_ang_velocity[-1]) - np.array(ang_vel)) / dt
-
-        # Data Logging
-        # --- 1. Log Positional Error ---
-        pos_error = np.array(pos) - np.array(target_pos)
-        self.log_errors_3d.append(pos_error)
         
-        return pos, current_rpy, vel, ang_vel, current_acc, current_ang_acc, acting_force, follower_thrust_cmds, follower_torque_cmds
+        return pos, current_rpy, vel, ang_vel
 
     def get_logging(self):
         return self.log_errors_3d, self.log_swing_angles, self.log_swing_energy

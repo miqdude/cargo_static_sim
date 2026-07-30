@@ -64,20 +64,15 @@ class MellingerControl:
             self,
             payload_offset,
             dt,
-            time_now,
             current_pos,
             current_rpy,
             current_vel,
             current_ang_vel,
-            current_acc,
-            current_ang_acc,
             target_pos,
             target_vel,
             target_ang_vel,
             target_acc,
             target_yaw,
-            payload_offset_x,
-            payload_offset_y,
             m_frame,
             m_payload,
         ):
@@ -146,7 +141,7 @@ class MellingerControl:
         # guess_cog_y = true_cog_y
 
         # Convert the PINN's payload offset guess into the Total System CoG
-        guess_cog_x, guess_cog_y = self._calculate_total_cog(m_frame, m_payload, [payload_offset_x, payload_offset_y])
+        guess_cog_x, guess_cog_y = self._calculate_total_cog(m_frame, m_payload, [payload_offset[0], payload_offset[1]])
 
         # Build the dynamic matrix 
         # the controller doesn't know about the shifted CoG by default
@@ -175,11 +170,11 @@ class MellingerControl:
         for i, name in enumerate(self.r_arms.keys()):
             # 1. The Thrust Command 
             # (Differential thrust handles global Altitude, Roll, and Pitch)
-            follower_thrust_cmds[name] = max(0.0, quad_thrusts[i])
+            follower_thrust_cmds[name] = float(max(0.0, quad_thrusts[i]))
             
             # 2. The Torque Command
             # Local Roll and Pitch remain 0 so they don't fight the main frame.
             # Local Yaw (Z-axis) is commanded to steer the global heading!
-            follower_torque_cmds[name] = np.array([0.0, 0.0, yaw_torque_per_drone])
+            follower_torque_cmds[name] = [0.0, 0.0, float(yaw_torque_per_drone)]
             
         return follower_thrust_cmds, follower_torque_cmds, Wrench

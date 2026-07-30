@@ -39,9 +39,13 @@ def main():
 
     try:
         while True:
-            # BLOCKING RECEIVE: The controller waits here until PyBullet ticks and sends data.
-            # This perfectly synchronizes your controller Hz with the simulation Hz.
-            message = socket_sub.recv_string()
+            try:
+                message = socket_sub.recv_string(flags=zmq.NOBLOCK)
+            except zmq.Again:
+                # No data received from PyBullet yet on this loop iteration.
+                # Sleep for 1 millisecond to prevent this while loop from maxing out 100% of your CPU core.
+                time.sleep(0.001)
+                continue
             
             state_data = json.loads(message)
             time_delta = state_data["deltaTime"]
@@ -87,13 +91,8 @@ def main():
                 FRAME_MASS,
                 PAYLOAD_MASS,
             )
-
-            # =========================================================
-            # COMMAND PACKAGING
-            # =========================================================
-            # Ensure output is standard floats for JSON serialization
-            clean_thrusts = [float(t) for t in thrust_commands]
-            response = {"thrusts": clean_thrusts}
+            
+            response = {"thrusts": thrust_commands, "torques": torque_commands}
 
             # Send back to PyBullet
             socket_pub.send_string(json.dumps(response))
