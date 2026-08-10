@@ -11,8 +11,6 @@ class PayloadEnv(object):
         self.drone_max_thrust = drone_max_thrust
         self.starting_position = [0, 0, 0.2]
 
-        print(f"PayloadEnv {urdf_path} {virtual_leader_urf_path}")
-
         # Load the assembled model safely using absolute paths
         current_dir = os.path.dirname(os.path.abspath(__file__))
         full_path = os.path.join(current_dir, urdf_path)
@@ -70,16 +68,16 @@ class PayloadEnv(object):
 
         # 3. Generate a Random CoG Shift (between -15cm and +15cm)
         # We only shift X and Y. Z stays slightly elevated to sit on the frame.
-        # x_shift = np.random.uniform(-0.15, 0.15)
-        # y_shift = np.random.uniform(-0.15, 0.15)
-        x_shift = 0
-        y_shift = 0
+        # x_shift = np.random.uniform(-0.2, 0.2)
+        # y_shift = np.random.uniform(-0.2, 0.2)
+        x_shift = 0.15
+        y_shift = 0.15
         self.payload_offset = [x_shift, y_shift, 0.05]
 
         random_payload_mass = self.rng.uniform(0.5,1)
 
         # 4. Re-spawn the red box
-        cog_shift_mass = random_payload_mass # 1 kg
+        cog_shift_mass = 1.0 # 1 kg
         box_half_extents = [0.05, 0.05, 0.05]
         
         visual_shape_id = self.pybullet.createVisualShape(
@@ -94,28 +92,28 @@ class PayloadEnv(object):
 
         spawn_pos = [start_pos[0] + x_shift, start_pos[1] + y_shift, start_pos[2]]
         
-        # self.shifted_mass_id = self.pybullet.createMultiBody(
-        #     baseMass=cog_shift_mass,
-        #     baseCollisionShapeIndex=collision_shape_id,
-        #     baseVisualShapeIndex=visual_shape_id,
-        #     basePosition=spawn_pos
-        # )
+        self.shifted_mass_id = self.pybullet.createMultiBody(
+            baseMass=cog_shift_mass,
+            baseCollisionShapeIndex=collision_shape_id,
+            baseVisualShapeIndex=visual_shape_id,
+            basePosition=spawn_pos
+        )
 
-        # self.pybullet.setCollisionFilterPair(
-        #     self.robot_id, self.shifted_mass_id, -1, -1, enableCollision=0
-        # )
+        self.pybullet.setCollisionFilterPair(
+            self.robot_id, self.shifted_mass_id, -1, -1, enableCollision=0
+        )
 
-        # # 5. Weld it to the frame and save the constraint ID so we can delete it later
-        # self.cog_constraint = self.pybullet.createConstraint(
-        #     parentBodyUniqueId=self.robot_id,   
-        #     parentLinkIndex=-1,                 
-        #     childBodyUniqueId=self.shifted_mass_id,
-        #     childLinkIndex=-1,
-        #     jointType=self.pybullet.JOINT_FIXED,
-        #     jointAxis=[0, 0, 0],
-        #     parentFramePosition=self.payload_offset,
-        #     childFramePosition=[0, 0, 0]
-        # )
+        # 5. Weld it to the frame and save the constraint ID so we can delete it later
+        self.cog_constraint = self.pybullet.createConstraint(
+            parentBodyUniqueId=self.robot_id,   
+            parentLinkIndex=-1,                 
+            childBodyUniqueId=self.shifted_mass_id,
+            childLinkIndex=-1,
+            jointType=self.pybullet.JOINT_FIXED,
+            jointAxis=[0, 0, 0],
+            parentFramePosition=self.payload_offset,
+            childFramePosition=[0, 0, 0]
+        )
         
         # Clear the logs for the new episode
         self.log_errors_3d = []
@@ -176,8 +174,6 @@ class PayloadEnv(object):
         pos, quat = self.pybullet.getBasePositionAndOrientation(self.robot_id)
         vel, ang_vel = self.pybullet.getBaseVelocity(self.robot_id)
         current_rpy = self.pybullet.getEulerFromQuaternion(quat)
-
-        print(f"follower cmds {follower_thrust_cmds}")
 
         # Update all 4 drones
         for drone in self.drones:

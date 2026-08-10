@@ -90,7 +90,8 @@ class MellingerControl:
 
         # r_ddot_des = self.kp_pos * err_pos + self.kd_pos * err_vel + target_acc 
         r_ddot_des = (self.kp_pos * err_pos) + (self.kd_pos * err_vel) + (self.ki_pos * self.integral_pos_error) + target_acc
-        
+        # r_ddot_des = (self.kp_pos * err_pos) + (self.kd_pos * err_vel) + target_acc
+
         # ==========================================
         # Hover Controller
         # ==========================================

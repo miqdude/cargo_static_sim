@@ -18,6 +18,8 @@ from mellinger_control import MellingerControl
 from payload_env import PayloadEnv
 from utils import get_trajectory, calculate_true_principal_inertia
 
+from topics import TOPIC_COMMANDS, TOPIC_TELEMETRY
+
 # --- PlotJuggler UDP Setup ---
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 PLOTJUGGLER_ADDRESS = ('127.0.0.1', 9870)
@@ -85,7 +87,7 @@ socket_pub.bind("tcp://*:5555")
 socket_sub = context.socket(zmq.SUB)
 socket_sub.setsockopt(zmq.CONFLATE, 1)  # Always keep only the newest packet
 socket_sub.bind("tcp://*:5556")
-socket_sub.setsockopt_string(zmq.SUBSCRIBE, "")
+socket_sub.setsockopt_string(zmq.SUBSCRIBE, TOPIC_COMMANDS)
 
 print("="*50)
 print("PyBullet ZMQ Environment Server Running...")
@@ -166,15 +168,23 @@ try:
                     "frameMass": FRAME_MASS
                 }
             }
-            socket_pub.send_string(json.dumps(state_payload))
+            json_data = json.dumps(state_payload)
+
+            socket_pub.send_string(f"{TOPIC_TELEMETRY} {json_data}")
 
             # 3. NON-BLOCKING RECEIVE COMMANDS FROM EXTERNAL PROCESS (SUB)
             try:
                 message = socket_sub.recv_string(flags=zmq.NOBLOCK)
-                command_data = json.loads(message)
-                if "thrusts" in command_data:
+                
+                # --- Split the topic from the JSON data ---
+                received_topic, json_payload = message.split(" ", 1)
+                command_data = json.loads(json_payload)
+                # -----------------------------------------------
+                
+                if received_topic == TOPIC_COMMANDS:
                     thrust_commands = command_data["thrusts"]
                     torque_commands = command_data["torques"]
+                    
             except zmq.Again:
                 # If no packet received this tick, reuse last command or handle fallback
                 pass
