@@ -5,25 +5,37 @@ import time
 import numpy as np
 
 from ekf import EKFEstimator
+from rls import RLSEstimator
 
 from topics import TOPIC_COMMANDS, TOPIC_ESTIMATION, TOPIC_TELEMETRY
 
 def main():
     context = zmq.Context()
 
-    # Connect to PyBullet Simulation Server
-    socket_sub = context.socket(zmq.SUB)
-    socket_sub.setsockopt(zmq.CONFLATE, 1) 
-    socket_sub.connect("tcp://localhost:5555")
-    socket_sub.setsockopt_string(zmq.SUBSCRIBE, TOPIC_TELEMETRY)
-    socket_sub.setsockopt_string(zmq.SUBSCRIBE, TOPIC_COMMANDS) 
+    # 1. DOWNLINK: Listen to PyBullet Telemetry
+    sub_telem = context.socket(zmq.SUB)
+    sub_telem.setsockopt(zmq.CONFLATE, 1) 
+    sub_telem.connect("tcp://localhost:5555") 
+    sub_telem.setsockopt_string(zmq.SUBSCRIBE, TOPIC_TELEMETRY)
 
+    # 2. COMMANDS: Listen to Controller Wrenches
+    sub_cmd = context.socket(zmq.SUB)
+    sub_cmd.setsockopt(zmq.CONFLATE, 1)
+    sub_cmd.connect("tcp://localhost:5556")
+    sub_cmd.setsockopt_string(zmq.SUBSCRIBE, TOPIC_COMMANDS)
 
-    socket_pub = context.socket(zmq.PUB)
-    socket_pub.connect("tcp://localhost:5556")
+    # 3. UPLINK: Broadcast Estimates
+    pub_est = context.socket(zmq.PUB)
+    pub_est.bind("tcp://*:5557") # BIND because it acts as the host for estimates
+
+    # Register the Poller
+    poller = zmq.Poller()
+    poller.register(sub_telem, zmq.POLLIN)
+    poller.register(sub_cmd, zmq.POLLIN)
 
     # Initialize Estimator and Memory Variables
     ekf = EKFEstimator()
+    rls = RLSEstimator()
     prev_ang_vel = np.zeros(3)
     
     # Define rigid frame inertia (From your PyBullet URDF)
@@ -37,21 +49,26 @@ def main():
     prev_ang_vel = np.zeros(3)
     inertia_tensor = (0.5, 0.5, 0.8)
 
-    while True:
-        try:
-            # 1. Receive the next message in the queue
-            raw_message = socket_sub.recv_string()
-            topic, json_data = raw_message.split(" ", 1)
-            
-            # 2. Route the data based on the topic
-            if topic == "telemetry":
-                latest_telem = json.loads(json_data)
-            elif topic == "wrench":
-                latest_wrench = json.loads(json_data)
+    try:
+        while True:
+            # Poll both sockets (timeout in milliseconds)
+            socks = dict(poller.poll(timeout=10))
+
+            # Check if new telemetry arrived
+            if sub_telem in socks:
+                raw_telem = sub_telem.recv_string()
+                _, json_telem = raw_telem.split(" ", 1)
+                latest_telem = json.loads(json_telem)
+
+            # Check if new commands arrived
+            if sub_cmd in socks:
+                raw_cmd = sub_cmd.recv_string()
+                _, json_cmd = raw_cmd.split(" ", 1)
+                latest_wrench = json.loads(json_cmd)
 
             # 3. Only run the EKF if we have fresh data for BOTH
             if latest_telem is not None and latest_wrench is not None:
-                
+
                 # Extract Telemetry
                 dt = latest_telem["deltaTime"]
                 current_ang_vel = np.array([
@@ -61,8 +78,8 @@ def main():
                 ])
 
                 # Extract Wrench
-                F_total = latest_wrench["F_total"] 
-                tau_geom = np.array([latest_wrench["tau_x"], latest_wrench["tau_y"]])
+                F_total = latest_wrench["wrench"][0] 
+                tau_geom = np.array([latest_wrench["wrench"][1], latest_wrench["wrench"][2]])
 
                 # Calculate Angular Acceleration
                 if dt > 0:
@@ -74,10 +91,16 @@ def main():
 
                 # Run EKF Update
                 if F_total > 5.0: 
-                    estimated_cog = ekf.update(
+                    # estimated_cog = ekf.update(
+                    #     F_total=F_total,
+                    #     tau_geom=tau_geom,
+                    #     omega=current_ang_vel,
+                    #     angular_accel=angular_accel,
+                    #     inertia=inertia_tensor
+                    # )
+                    estimated_cog = rls.update(
                         F_total=F_total,
                         tau_geom=tau_geom,
-                        omega=current_ang_vel,
                         angular_accel=angular_accel,
                         inertia=inertia_tensor
                     )
@@ -92,18 +115,19 @@ def main():
                     "estimated_cog_x": float(estimated_cog[0]),
                     "estimated_cog_y": float(estimated_cog[1])
                 }
-                socket_pub.send_string(f"{TOPIC_ESTIMATION} {json.dumps(estimate_payload)}")
+                pub_est.send_string(f"{TOPIC_ESTIMATION} {json.dumps(estimate_payload)}")
 
                 # 4. Clear the state holders to wait for the next paired physics step
                 latest_telem = None
                 latest_wrench = None
 
-        except KeyboardInterrupt:
-            print("\nShutting down")
-        finally:
-            socket_pub.close()
-            socket_sub.close()
-            context.term()
+    except KeyboardInterrupt:
+        print("\nShutting down")
+    finally:
+        sub_cmd.close()
+        sub_telem.close()
+        pub_est.close()
+        context.term()
 
 if __name__ == "__main__":
     main()

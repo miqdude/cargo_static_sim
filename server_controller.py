@@ -8,7 +8,7 @@ from mellinger_control import MellingerControl
 from geometric_control import GeometricControl
 
 from waypoint import WaypointManager
-from utils import get_trajectory
+from utils import get_trajectory, calculate_payload_offset
 
 from topics import TOPIC_COMMANDS, TOPIC_TELEMETRY, TOPIC_ESTIMATION
 
@@ -22,20 +22,25 @@ TIME_STEP = 1.0 / RATE_HZ
 def main():
     context = zmq.Context()
 
-    # Connect to PyBullet Simulation
-    # Connect to the PyBullet Publisher (Receives State)
+    # 1. Listen to PyBullet Telemetry
     socket_sub = context.socket(zmq.SUB)
     socket_sub.setsockopt(zmq.CONFLATE, 1) 
-    socket_sub.connect("tcp://localhost:5555") # Note: 'connect' instead of 'bind'
-    socket_sub.setsockopt_string(zmq.SUBSCRIBE, "")
-    # socket_sub.setsockopt_string(zmq.SUBSCRIBE, TOPIC_ESTIMATION) 
+    socket_sub.connect("tcp://localhost:5555") 
+    socket_sub.setsockopt_string(zmq.SUBSCRIBE, TOPIC_TELEMETRY)
+    
+    # 2. Listen to Estimator Updates
+    socket_est = context.socket(zmq.SUB)
+    socket_est.setsockopt(zmq.CONFLATE, 1) 
+    socket_est.connect("tcp://localhost:5557") # Connects to the Estimator
+    socket_est.setsockopt_string(zmq.SUBSCRIBE, TOPIC_ESTIMATION)
 
-    # Connect to the PyBullet Subscriber (Sends Thrusts)
+    # 3. Publish Thrust Commands
     socket_pub = context.socket(zmq.PUB)
-    socket_pub.connect("tcp://localhost:5556")
+    socket_pub.bind("tcp://*:5556")  # MUST BE BIND! So Simulator and Estimator can both connect to it.
 
-    # Provide connection for the estimator
-
+    poller = zmq.Poller()
+    poller.register(socket_sub, zmq.POLLIN)
+    poller.register(socket_est, zmq.POLLIN)
     
     # Define standard Z-Up waypoints (e.g., hover at 7 meters)
     mission_waypoints = [
@@ -76,8 +81,8 @@ def main():
 
     # Initialize the controllers
     waypoint_manager = WaypointManager(mission_waypoints, acceptance_radius=0.3, max_speed=2.0)
-    # controller = MellingerControl(mass_total=TOTAL_MASS)
-    controller = GeometricControl(TOTAL_MASS)
+    controller = MellingerControl(mass_total=TOTAL_MASS)
+    # controller = GeometricControl(TOTAL_MASS)
 
     print("Controller Started...")
     print("(Press Ctrl+C to stop).")
@@ -85,89 +90,98 @@ def main():
     try:
         time_now = 0.0
         latest_telem = None
+        est_offset_x = 0.0
+        est_offset_y = 0.0
+        est_mass = 0.0 # estimated payload mass
 
         while True:
-            try:
-                raw_message = socket_sub.recv(flags=zmq.NOBLOCK)
-            except zmq.Again:
-                time.sleep(0.001)
-                continue
+            # Poll both sockets (timeout in milliseconds)
+            socks = dict(poller.poll(timeout=10))
 
-            # convert binary to string
-            message_str = raw_message.decode("UTF-8")
-            
-            topic, json_data = message_str.split(" ", 1)
-            print(f"Received topic {message_str}")
-            
-            # 2. Route the data based on the topic
-            if topic == TOPIC_TELEMETRY:
-                latest_telem = json.loads(json_data)
+            if not socks:
+                continue # Skip this loop iteration if PyBullet hasn't sent a new frame
 
-            if latest_telem == None:
-                continue
-            
-            state_data = json.loads(json_data)
-            time_delta = state_data["deltaTime"]
-            composite_state = state_data["frame"]
-            
-            # Extract basic dictionaries
-            pos = composite_state["position"]
-            vel = composite_state["velocity"]
-            rot = composite_state["rotation"]
-            ang_vel = composite_state["angularVelocity"]
+            # Check if new telemetry arrived
+            if socket_est in socks:
+                raw_telem = socket_est.recv_string()
+                _, json_telem = raw_telem.split(" ", 1)
+                latest_est = json.loads(json_telem)
+                raw_system_cog_x = latest_est["estimated_cog_x"]
+                raw_system_cog_y = latest_est["estimated_cog_y"]
 
-            # Standard 1-to-1 Z-Up Mapping (No Unity Axis Swapping Required!)
-            pos_np = np.array([pos['x'], pos['y'], pos['z']])
-            vel_np = np.array([vel['x'], vel['y'], vel['z']])
-            rot_np = np.array([rot['x'], rot['y'], rot['z']])
-            ang_vel_np = np.array([ang_vel['x'], ang_vel['y'], ang_vel['z']])
+                # harusnya diconvert jadi offset dulu
+                payload_mass_guess = max(0.05, TOTAL_MASS - FRAME_MASS)
+                est_offset_x, est_offset_y, _ = calculate_payload_offset(FRAME_MASS, payload_mass_guess, [raw_system_cog_x, raw_system_cog_y, 0])
 
-            # =========================================================
-            # TRAJECTORY GENERATION
-            # =========================================================
-            # using waypoints
-            # target_pos, target_vel, target_acc, target_rpy, target_ang_vel = waypoint_manager.get_target_state(
-            #     pos_np, time_delta
-            # )
+            if socket_sub in socks:
+                raw_telem = socket_sub.recv_string()
+                _, json_telem = raw_telem.split(" ", 1)
+                latest_telem = json.loads(json_telem)
 
-            # Ensure yaw is scalar
-            # target_yaw_scalar = target_rpy[2] if isinstance(target_rpy, (list, np.ndarray)) else target_rpy
+            if latest_telem is not None:
+                time_delta = latest_telem["deltaTime"]
+                composite_state = latest_telem["frame"]
+                
+                # Extract basic dictionaries
+                pos = composite_state["position"]
+                vel = composite_state["velocity"]
+                rot = composite_state["rotation"]
+                ang_vel = composite_state["angularVelocity"]
 
-            # using trajectory generation
-            target_pos, target_vel, target_acc, target_rpy, target_ang_vel = get_trajectory(time_now, "figure_eight_3d")
+                # Standard 1-to-1 Z-Up Mapping (No Unity Axis Swapping Required!)
+                pos_np = np.array([pos['x'], pos['y'], pos['z']])
+                vel_np = np.array([vel['x'], vel['y'], vel['z']])
+                rot_np = np.array([rot['x'], rot['y'], rot['z']])
+                ang_vel_np = np.array([ang_vel['x'], ang_vel['y'], ang_vel['z']])
 
-            # =========================================================
-            # CONTROL ALLOCATION
-            # =========================================================
-            thrust_commands, torque_commands, wrench = controller.get_follower_commands(
-                [0.0, 0.0], # Hardcoded offset guess (assuming perfect CoG)
-                time_delta,
-                pos_np,
-                rot_np,
-                vel_np,
-                ang_vel_np,
-                target_pos,
-                target_vel,
-                target_ang_vel,
-                target_acc,
-                target_rpy,
-                FRAME_MASS,
-                PAYLOAD_MASS,
-            )
-            
-            response = {"thrusts": thrust_commands, "torques": torque_commands}
-            json_response = json.dumps(response)
+                # =========================================================
+                # TRAJECTORY GENERATION
+                # =========================================================
+                # using waypoints
+                # target_pos, target_vel, target_acc, target_rpy, target_ang_vel = waypoint_manager.get_target_state(
+                #     pos_np, time_delta
+                # )
 
-            # Send back to PyBullet
-            socket_pub.send_string(f"{TOPIC_COMMANDS} {json_response}")
+                # Ensure yaw is scalar
+                # target_yaw_scalar = target_rpy[2] if isinstance(target_rpy, (list, np.ndarray)) else target_rpy
 
-            time_now += TIME_STEP
+                # using trajectory generation
+                target_pos, target_vel, target_acc, target_rpy, target_ang_vel = get_trajectory(time_now, "hover")
+
+                # =========================================================
+                # CONTROL ALLOCATION
+                # =========================================================
+                print(f"estimated offset {est_offset_x} {est_offset_y} estimated mass : {est_mass}")
+                thrust_commands, torque_commands, wrench = controller.get_follower_commands(
+                    [est_offset_x, est_offset_y], # Hardcoded offset guess (assuming perfect CoG)
+                    time_delta,
+                    pos_np,
+                    rot_np,
+                    vel_np,
+                    ang_vel_np,
+                    target_pos,
+                    target_vel,
+                    target_ang_vel,
+                    target_acc,
+                    target_rpy,
+                    FRAME_MASS,
+                    max(0.0, est_mass + FRAME_MASS), # payload mass
+                )
+                
+                response = {"thrusts": thrust_commands, "torques": torque_commands, "wrench": wrench}
+                json_response = json.dumps(response)
+
+                # Send back to PyBullet
+                socket_pub.send_string(f"{TOPIC_COMMANDS} {json_response}")
+
+                time_now += TIME_STEP
 
     except KeyboardInterrupt:
         print("\nShutting down gracefully.")
     finally:
         socket_pub.close()
         socket_sub.close()
+        socket_est.close()
         context.term()
 
 if __name__ == "__main__":

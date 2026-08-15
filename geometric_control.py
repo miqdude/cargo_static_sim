@@ -72,9 +72,15 @@ class GeometricControl:
         return cog_x, cog_y
 
     def get_follower_commands(
-            self, payload_offset, dt, current_pos, current_rpy, current_vel, 
-            current_ang_vel, target_pos, target_vel, target_ang_vel, 
-            target_acc, target_yaw, m_frame, m_payload):
+            self,
+            payload_offset,
+            dt,
+            current_pos, current_rpy,
+            current_vel, current_ang_vel,
+            target_pos,
+            target_vel, target_ang_vel, 
+            target_acc, target_yaw,
+            m_frame, m_payload):
 
         # ---------------------------------------------------------
         # 1. TRANSLATIONAL CONTROL (Position to Force)
@@ -147,7 +153,7 @@ class GeometricControl:
         # ---------------------------------------------------------
         # 4. ALLOCATION & COMMAND PACKAGING
         # ---------------------------------------------------------
-        Wrench = np.array([total_thrust, tau_des[0], tau_des[1], tau_des[2]])
+        Wrench = [total_thrust, tau_des[0], tau_des[1], tau_des[2]]
 
         guess_cog_x, guess_cog_y = self._calculate_total_cog(m_frame, m_payload, payload_offset)
         

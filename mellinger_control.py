@@ -133,7 +133,7 @@ class MellingerControl:
         # ==========================================
         # System Dynamics Allocation
         # ==========================================
-        Wrench = np.array([F_B_des, M_des[0], M_des[1], M_des[2]])
+        Wrench = [F_B_des, M_des[0], M_des[1], M_des[2]]
 
         true_cog_x = (1.0 * payload_offset[0]) / self.M_total
         true_cog_y = (1.0 * payload_offset[1]) / self.M_total

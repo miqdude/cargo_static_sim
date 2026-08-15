@@ -86,7 +86,7 @@ socket_pub.bind("tcp://*:5555")
 # Socket to receive motor commands/wrenches from external controllers (Port 5556)
 socket_sub = context.socket(zmq.SUB)
 socket_sub.setsockopt(zmq.CONFLATE, 1)  # Always keep only the newest packet
-socket_sub.bind("tcp://*:5556")
+socket_sub.connect("tcp://localhost:5556")
 socket_sub.setsockopt_string(zmq.SUBSCRIBE, TOPIC_COMMANDS)
 
 print("="*50)

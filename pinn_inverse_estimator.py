@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class Inverse6DoFPINN(nn.Module):
+class PINNInverseEstimator(nn.Module):
     def __init__(self):
-        super(Inverse6DoFPINN, self).__init__()
+        super(PINNInverseEstimator, self).__init__()
         
         # 1. The Trajectory Surrogate
         # Input: time (t) -> Output: The 12-DoF Flight State
