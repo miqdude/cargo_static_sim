@@ -92,7 +92,7 @@ def main():
         latest_telem = None
         est_offset_x = 0.0
         est_offset_y = 0.0
-        est_mass = 0.0 # estimated payload mass
+        est_payload_mass = 0.0 # estimated payload mass
 
         while True:
             # Poll both sockets (timeout in milliseconds)
@@ -151,9 +151,9 @@ def main():
                 # =========================================================
                 # CONTROL ALLOCATION
                 # =========================================================
-                print(f"estimated offset {est_offset_x} {est_offset_y} estimated mass : {est_mass}")
+                # print(f"estimated offset {est_offset_x} {est_offset_y} estimated mass : {est_payload_mass}")
                 thrust_commands, torque_commands, wrench = controller.get_follower_commands(
-                    [est_offset_x, est_offset_y], # Hardcoded offset guess (assuming perfect CoG)
+                    [est_offset_x, est_offset_y],
                     time_delta,
                     pos_np,
                     rot_np,
@@ -165,7 +165,7 @@ def main():
                     target_acc,
                     target_rpy,
                     FRAME_MASS,
-                    max(0.0, est_mass + FRAME_MASS), # payload mass
+                    est_payload_mass, # payload mass
                 )
                 
                 response = {"thrusts": thrust_commands, "torques": torque_commands, "wrench": wrench}

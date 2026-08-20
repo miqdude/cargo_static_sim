@@ -9,6 +9,9 @@ import torch.nn.functional as F
 import torch.nn as nn
 import pandas as pd
 
+import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
+
 # Import YOUR exact PINN code here
 from pinn_inverse_estimator import PINNInverseEstimator, train_pinn_step
 from topics import TOPIC_COMMANDS, TOPIC_ESTIMATION, TOPIC_TELEMETRY
@@ -66,6 +69,7 @@ def main():
 
     try:
         hist_time, hist_pos, hist_vel = [], [], []
+        hist_total_loss = []
 
         while True:
             socks = dict(poller.poll(timeout=10))
@@ -139,6 +143,9 @@ def main():
 
                         print(f"PINN Loss: {total_loss.item():.4f}")
 
+                        # update the history
+                        hist_total_loss.append(total_loss.item())
+
                     with torch.no_grad():
                         # Drone is grounded or buffer is filling
                         est_cog_x = float(pinn_model.cog_x.item())
@@ -151,10 +158,20 @@ def main():
                         est_j_yy = float(F.softplus(pinn_model.J_yy).item()) 
                         est_j_zz = float(F.softplus(pinn_model.J_zz).item())
                     
-                    print(f"PINN CoG: ({est_cog_x:.4f}, {est_cog_y:.4f})")
+                    print(f"Estimated mass {est_mass})")
 
-                # Broadcast Estimate
-                estimate_payload = {
+                # Estimations
+                # EMA low pass filter to remove high frequency spikes
+                ALPHA = 0.1
+                est_mass = (1.0 - ALPHA) * est_mass + ALPHA * est_mass
+                est_cog_x = (1.0 - ALPHA) * est_cog_x + ALPHA * est_cog_x
+                est_cog_y = (1.0 - ALPHA) * est_cog_y + ALPHA * est_cog_y
+                
+                est_j_xx = (1.0 - ALPHA) * est_j_xx + ALPHA * est_j_xx
+                est_j_yy = (1.0 - ALPHA) * est_j_yy + ALPHA * est_j_yy
+                est_j_zz = (1.0 - ALPHA) * est_j_zz + ALPHA * est_j_zz
+
+                estimations = {
                     "time": t_val,
                     "estimated_cog_x": est_cog_x,
                     "estimated_cog_y": est_cog_y,
@@ -162,11 +179,10 @@ def main():
                     "estimated_j_xx": est_j_xx,
                     "estimated_j_yy": est_j_yy,
                     "estimated_j_zz": est_j_zz,
-
                 }
 
                 # print(f"estimations {estimate_payload}")
-                pub_est.send_string(f"{TOPIC_ESTIMATION} {json.dumps(estimate_payload)}")
+                pub_est.send_string(f"{TOPIC_ESTIMATION} {json.dumps(estimations)}")
 
                 # Clear for next tick
                 latest_telem = None
@@ -193,10 +209,37 @@ def main():
         print(f"hist vel: {len(hist_vel)}")
         print(f"hist pos: {len(hist_pos)}")
 
-
         df = pd.DataFrame(episode_data)
         csv_filename = f"./estimator.csv"
-        df.iloc[::10, :].to_csv(csv_filename, index=False)
+        df.to_csv(csv_filename, index=False)
+
+        # create the data plot
+        fig = plt.figure(figsize=(12,20))
+        # gs = GridSpec(6, 1, figure=fig)
+        gs = GridSpec(10, 1, figure=fig, hspace=.5)
+        plt.suptitle(f"Episode PINN Convergence over Time", fontsize=16)
+
+        ax1 = fig.add_subplot(gs[0, 0])
+
+        ax1.plot(hist_total_loss, 'b--', label='True Mass')
+        ax1.set(title='Total Loss Over time', xlabel='Time (s)', ylabel='Loss')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend()
+        # ax1.legend(
+        #     loc='center left',          # Anchors the left side of the legend box
+        #     bbox_to_anchor=(1.01, 0.5), # Pushes it just outside the right edge of the plot
+        #     ncol=1,                     # 1 column looks cleaner when on the side
+        #     frameon=True,             
+        #     edgecolor='gray',         
+        #     fancybox=False,           
+        #     shadow=False,             
+        #     borderpad=0.5,            
+        #     labelspacing=0.3
+        # )
+        ax1.set_yscale('log')
+
+        fig.savefig(f"./plotting.png")
+
 
 if __name__ == "__main__":
     main()

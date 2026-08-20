@@ -76,7 +76,6 @@ class MellingerControl:
             m_frame,
             m_payload,
         ):
-        
 
         # ==========================================
         # Position Control
@@ -86,7 +85,7 @@ class MellingerControl:
         err_vel = np.array(target_vel) - np.array(current_vel)
 
         self.integral_pos_error += err_pos * dt
-        self.integral_pos_error = np.clip(self.integral_pos_error, -5.0, 5.0)
+        self.integral_pos_error = np.clip(self.integral_pos_error, -20.0, 20.0)
 
         # r_ddot_des = self.kp_pos * err_pos + self.kd_pos * err_vel + target_acc 
         r_ddot_des = (self.kp_pos * err_pos) + (self.kd_pos * err_vel) + (self.ki_pos * self.integral_pos_error) + target_acc

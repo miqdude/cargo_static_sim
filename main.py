@@ -30,7 +30,7 @@ TIME_STEP = 1.0 / RATE_HZ
 GRAVITY_MSS = 9.81
 SIMULATION_DURATION = 120 # simulation time in seconds
 TOTAL_EPISODES = 1
-MAX_DRONE_THRUST = 50
+MAX_DRONE_THRUST = 60
 TOTAL_SYSTEM_MASS = 7.8
 FRAME_MASS = 6.8
 
@@ -165,7 +165,8 @@ try:
                 },
                 "payloadState": {
                     "offset": [true_cog[0], true_cog[1]],
-                    "frameMass": FRAME_MASS
+                    "frameMass": FRAME_MASS,
+                    "payloadMass": guess_mass - FRAME_MASS
                 }
             }
             json_data = json.dumps(state_payload)
@@ -226,7 +227,7 @@ try:
             
             fig = plt.figure(figsize=(12, 10))
             gs = GridSpec(3, 1, figure=fig, hspace=0.4)
-            plt.suptitle(f"Episode {curr_episode}: Trajectory Tracking", fontsize=16)
+            plt.suptitle(f"Episode {curr_episode} Offset X: {true_cog[0]} Y: {true_cog[1]} Trajectory Tracking", fontsize=16)
 
             ax1 = fig.add_subplot(gs[0, 0])
             ax2 = fig.add_subplot(gs[1, 0])
