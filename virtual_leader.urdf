@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<robot name="virtual_leader">
+  <link name="base_link">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <!-- <sphere radius="0.15"/>  -->
+        <box size="0.2 0.2 0.02"/>
+      </geometry>
+      <material name="ghost_green">
+        <color rgba="0.0 1.0 0.0 0.6"/> 
+      </material>
+    </visual>
+  </link>
+</robot>
