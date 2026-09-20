@@ -152,6 +152,12 @@ def main():
                     "estimated_cog_x": float(estimations[0]),
                     "estimated_cog_y": float(estimations[1]),
                     "estimated_mass": float(estimations[2]),
+                    "estimated_j_xx": 1.0,
+                    "estimated_j_yy": 1.0,
+                    "estimated_j_zz": 1.0,
+                    "estimated_wind_x": 0.0,
+                    "estimated_wind_y": 0.0,
+                    "estimated_wind_z": 0.0,
                 }
                 pub_est.send_string(f"{TOPIC_ESTIMATION} {json.dumps(estimate_payload)}")
 

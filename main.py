@@ -35,7 +35,7 @@ TOTAL_SYSTEM_MASS = 7.8
 FRAME_MASS = 6.8
 PAYLOAD_MASS = 1.0
 WIND_DISTURBANCE = True
-ENABLE_PAYLOAD = False
+ENABLE_PAYLOAD = True
 
 # ==========================================
 # 3. MAIN SIMULATION LOOP
@@ -283,7 +283,7 @@ finally:
     # ==========================================
     # RENDER FINAL STATIC PLOT FOR THE EPISODE
     # ==========================================
-    # fix the dimension issue
+    print("\n--------- Rendering Plot and Videos ------------")
     if len(history_time) > 0: 
 
         target_x = [p[0] for p in ep_target_pos]

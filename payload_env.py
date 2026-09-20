@@ -187,7 +187,7 @@ class PayloadEnv(object):
 
         # Apply wind disturbance
         # Wind disturbance force settings
-        wind_base = np.array([1.0, 0.0, 0.0])
+        wind_base = np.array([0.1, 0.0, 0.0])
 
         # wind_gust = np.array([
         #     np.sin(sim_time * 1.5) * 3.0,  # Swirling X gust
