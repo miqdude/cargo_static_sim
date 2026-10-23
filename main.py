@@ -34,8 +34,9 @@ MAX_DRONE_THRUST = 50
 TOTAL_SYSTEM_MASS = 7.8
 FRAME_MASS = 6.8
 PAYLOAD_MASS = 1.0
-WIND_DISTURBANCE = True
-ENABLE_PAYLOAD = True
+WIND_DISTURBANCE = False
+ENABLE_PAYLOAD = False
+PATH_TRAJECTORY = "hover_rotate"
 
 # ==========================================
 # 3. MAIN SIMULATION LOOP
@@ -70,7 +71,7 @@ p.loadURDF("plane.urdf")
 leader = MellingerControl(mass_total=TOTAL_SYSTEM_MASS)
 
 env = PayloadEnv(args.f, args.fl, leader, p, ENABLE_PAYLOAD,
-                GRAVITY_MSS, debug=args.debug, drone_max_thrust=MAX_DRONE_THRUST)
+                GRAVITY_MSS, drone_max_thrust=MAX_DRONE_THRUST)
 
 print("="*50)
 print(f"Simulation Environment running, duration {SIMULATION_DURATION} secs.")
@@ -121,7 +122,6 @@ r_arms = {
 }
 
 try:
-    PATH_TRAJECTORY = "figure8"
     base_frame_inertia = [1.515, 1.515, 3.000] 
 
     curr_episode = 0
@@ -194,6 +194,10 @@ try:
                 # calculated offset from controller
                 latest_est["estimated_offset_x"] = latest_commands["calculated_offset_x"]
                 latest_est["estimated_offset_y"] = latest_commands["calculated_offset_y"]
+            else:
+
+                # add zero target ep_target_pos so the data length will be same
+                ep_target_pos.append([0.0, 0.0, 0.0])
 
             if socket_est in socks:
                 raw_telem = socket_est.recv_string()
@@ -365,3 +369,38 @@ finally:
         csv_filename = f"./flight_data_{PATH_TRAJECTORY}.csv"
         df.iloc[::10, :].to_csv(csv_filename, index=False)
         print(f"Successfully saved {csv_filename}")
+
+        # ==========================================
+        # CALCULATE AND PRINT FINAL RMSE METRICS
+        # ==========================================
+        # Convert lists to numpy arrays for vectorized math
+        actual_xyz = np.column_stack((ep_actual_x, ep_actual_y, ep_actual_z))
+        target_xyz = np.column_stack((target_x, target_y, target_z))
+        
+        # 1. Trajectory RMSE
+        errors_3d = actual_xyz - target_xyz
+        rmse_xyz = np.sqrt(np.mean(errors_3d**2, axis=0))
+        
+        distances = np.linalg.norm(errors_3d, axis=1)
+        rmse_3d = np.sqrt(np.mean(distances**2))
+
+        # 2. Estimation RMSE
+        rmse_mass = np.sqrt(np.mean((np.array(hist_est_mass) - np.array(history_true_mass))**2))
+        rmse_cx = np.sqrt(np.mean((np.array(hist_est_offset_x) - np.array(ep_true_offset_x))**2))
+        rmse_cy = np.sqrt(np.mean((np.array(hist_est_offset_y) - np.array(ep_true_offset_y))**2))
+
+        # Print Final Evaluation Report
+        print("\n" + "="*45)
+        print("      FINAL RMSE EVALUATION METRICS      ")
+        print("="*45)
+        print("[TRAJECTORY TRACKING]")
+        print(f" 3D Euclidean RMSE:   {rmse_3d:.4f} m")
+        print(f" -> X-Axis RMSE:      {rmse_xyz[0]:.4f} m")
+        print(f" -> Y-Axis RMSE:      {rmse_xyz[1]:.4f} m")
+        print(f" -> Z-Axis RMSE:      {rmse_xyz[2]:.4f} m")
+        print("-" * 45)
+        print("[PINN PARAMETER ESTIMATION]")
+        print(f" Mass RMSE:           {rmse_mass:.4f} kg")
+        print(f" CoG X-Offset RMSE:   {rmse_cx:.4f} m")
+        print(f" CoG Y-Offset RMSE:   {rmse_cy:.4f} m")
+        print("="*45 + "\n")

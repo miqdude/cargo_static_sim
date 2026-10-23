@@ -151,7 +151,7 @@ def train_pinn_step(
     local_thrust = total_thrust.unsqueeze(2) * e3 
     global_thrust = torch.bmm(R_matrix, local_thrust).squeeze(2) 
 
-    # NEW: Construct the predicted global wind force vector
+    # Construct the predicted global wind force vector
     pred_wind_force = torch.cat([
         pred_wind_fx.expand(true_times.shape[0], 1),
         pred_wind_fy.expand(true_times.shape[0], 1),

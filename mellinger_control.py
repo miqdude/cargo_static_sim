@@ -15,8 +15,8 @@ class MellingerControl:
         self.integral_pos_error = np.zeros(3) 
         
         # Attitude Control
-        self.kp_att = np.array([10.0, 10.0, 0.2])  # Dropped P gain 
-        self.kd_att = np.array([7.0, 7.0, 0.1])  # Kept D high for heavy drag/damping this values gives slow oscilating
+        self.kp_att = np.array([10.0, 10.0, 5.0])  # Boosted Yaw P from 0.2
+        self.kd_att = np.array([7.0, 7.0, 2.5])    # Boosted Yaw D from 0.1
         # self.kp_att = np.array([0.8, .8, 0.2])  # Dropped P gain 
         # self.kd_att = np.array([0, 0, 0.1])  # Kept D high for heavy drag/damping this value works
 
@@ -44,10 +44,13 @@ class MellingerControl:
             
             A[1, i] = eff_y           # Roll Moment (Y arm)
             A[2, i] = -eff_x          # Pitch Moment (-X arm)
-            A[3, i] = self.c_yaw[i]   # Yaw Moment
+            
+            # YAW FIX: Vertical thrust from a drone cannot yaw the main frame.
+            # Yaw is handled mechanically by the local follower_torque_cmds.
+            A[3, i] = 0.0             
             
         return A
-    
+
     def _calculate_total_cog(self, m_frame, m_payload, payload_offset):
         """ Internal helper to find the true physical center of rotation """
         m_tot = m_frame + m_payload
@@ -96,6 +99,16 @@ class MellingerControl:
         # ==========================================
         
         psi_T = current_rpy[2] # Current Yaw
+        
+        # 2. Create the rotation matrix from World to Body frame (Z-axis rotation)
+        cos_psi = np.cos(psi_T)
+        sin_psi = np.sin(psi_T)
+        
+        R_world_to_body = np.array([
+            [ cos_psi,  sin_psi, 0.0],
+            [-sin_psi,  cos_psi, 0.0],
+            [     0.0,      0.0, 1.0]
+        ])
 
         phi_des = (1.0 / self.g) * (r_ddot_des[0] * np.sin(psi_T) - r_ddot_des[1] * np.cos(psi_T))
         theta_des = (1.0 / self.g) * (r_ddot_des[0] * np.cos(psi_T) + r_ddot_des[1] * np.sin(psi_T))
@@ -117,17 +130,30 @@ class MellingerControl:
         else:
             yaw_cmd = target_yaw
 
+        # err_att = np.array([
+        #     phi_des - current_rpy[0], 
+        #     theta_des - current_rpy[1], 
+        #     yaw_cmd - current_rpy[2]
+        # ], dtype=float) # Force a clean float array
+
+        raw_yaw_error = yaw_cmd - current_rpy[2]
+        wrapped_yaw_error = np.arctan2(np.sin(raw_yaw_error), np.cos(raw_yaw_error))
+
         err_att = np.array([
             phi_des - current_rpy[0], 
             theta_des - current_rpy[1], 
-            yaw_cmd - current_rpy[2]
-        ], dtype=float) # Force a clean float array
+            wrapped_yaw_error
+        ], dtype=float)
 
-        err_ang_rate = np.array(target_ang_vel) - np.array(current_ang_vel)
+        # 3. Convert PyBullet's global gyro into local body gyro
+        body_ang_vel = np.dot(R_world_to_body, current_ang_vel)
+        
+        # 4. Calculate rate error in the correct frame!
+        err_ang_rate = np.array(target_ang_vel) - body_ang_vel
 
         # calculate desired torque
         M_des = (self.kp_att * err_att) + (self.kd_att * err_ang_rate)
-        M_des[2] = np.clip(M_des[2], -2.0, 2.0) # Clamp yaw
+        M_des[2] = np.clip(M_des[2], -1.5, 1.5) # Clamp yaw
 
         # ==========================================
         # System Dynamics Allocation

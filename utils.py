@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib.animation import FuncAnimation
 from IPython.display import HTML, display
-import numpy as np
 
 def get_kinetic_energy(mass, velocity):
     return .5 * mass * velocity**2
@@ -51,8 +50,6 @@ def show_evaluation(env, simulation_duration):
     print(f" Mean Swing Angle:    {mean_swing_deg:.2f}°")
     print(f" Mean Slosh Energy:   {mean_energy:.4f} Joules")
     print("="*45 + "\n")
-
-import numpy as np
 
 def get_trajectory(t, path_type="figure8"):
     
@@ -327,7 +324,7 @@ def get_trajectory(t, path_type="figure8"):
             
             # return pos, vel, acc, rpy, ang_vel
 
-        elif "lawn":
+        elif path_type == "lawn":
             # 1. Timing and Amplitudes
             T_cycle = 20.0       # Total time for one full Forward-Backward-Left-Right cycle
             T_phase = 5.0        # Time for each individual movement
@@ -349,7 +346,7 @@ def get_trajectory(t, path_type="figure8"):
             vel[0] = (A * w / 2.0) * np.sin(w * t)
             acc[0] = (A * w**2 / 2.0) * np.cos(w * t)
 
-        elif "lemiscate":    
+        elif path_type == "lemiscate":    
             # 1. Tuning Parameters
             A_x = 3.0  # Max distance forward/backward (meters)
             A_y = 1.5  # Max distance left/right (meters)
@@ -384,6 +381,25 @@ def get_trajectory(t, path_type="figure8"):
             
             return pos, vel, acc, target_rpy, target_ang_vel
 
+        elif path_type == "hover_rotate":
+            z_height = 5.0 
+            
+            # 1. Position remains perfectly static
+            pos = [0.0, 0.0, z_height]
+            vel = [0.0, 0.0, 0.0]
+            acc = [0.0, 0.0, 0.0]
+            
+            # 2. Continuous Yaw Rotation Parameters
+            rotation_speed = 0.5  # radians per second (approx 28 deg/s)
+            
+            # 3. Calculate current yaw angle and constant angular velocity
+            yaw = rotation_speed * flight_t
+            
+            # 4. Pack into expected arrays
+            rpy = [0.0, 0.0, yaw]
+            ang_vel = [0.0, 0.0, rotation_speed] 
+            
+            return pos, vel, acc, rpy, ang_vel
     # # ==========================================
     # # NEW: ORIENTATION (GHOST CAR) CALCULATIONS
     # # ==========================================

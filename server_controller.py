@@ -18,7 +18,7 @@ PAYLOAD_MASS = 1.0  # Assumed static payload since PINN is removed
 TOTAL_MASS = FRAME_MASS + PAYLOAD_MASS
 RATE_HZ = 240.0
 TIME_STEP = 1.0 / RATE_HZ
-TRAJECTORY_PATH = "hover"
+TRAJECTORY_PATH = "hover_rotate"
 
 def main():
     context = zmq.Context()
@@ -82,7 +82,7 @@ def main():
 
     # Initialize the controllers
     waypoint_manager = WaypointManager(mission_waypoints, acceptance_radius=0.3, max_speed=2.0)
-    controller = MellingerControl(mass_total=TOTAL_MASS)
+    controller = GeometricControl(mass_total=TOTAL_MASS)
     # controller = GeometricControl(TOTAL_MASS)
 
     print("Controller Started...")

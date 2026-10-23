@@ -11,57 +11,18 @@
       <inertia ixx="0.08" ixy="0" ixz="0" iyy="0.08" iyz="0" izz="0.16"/>
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 -.02"/>
       <geometry>
-        <box size="0.1 1.2 0.02"/>
+        <box size="1.2 1.2 0.02"/>
       </geometry>
       <material name="stripe_red">
-        <color rgba="0.8 0.1 0.1 1"/>
+        <color rgba="0.1 0.8 0.1 1"/>
       </material>
     </visual>
     <collision>
-      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 -.02"/>
       <geometry>
-        <box size="0.1 1.2 0.02"/>
-      </geometry>
-    </collision>
-    <visual>
-      <origin rpy="0 0 0" xyz="-0.5 0 0"/>
-      <geometry>
-        <box size="0.1 1.2 0.02"/>
-      </geometry>
-      <material name="stripe_red"/>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="-0.5 0 0"/>
-      <geometry>
-        <box size="0.1 1.2 0.02"/>
-      </geometry>
-    </collision>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0.5 0"/>
-      <geometry>
-        <box size="1.0 0.1 0.02"/>
-      </geometry>
-      <material name="stripe_red"/>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0.5 0"/>
-      <geometry>
-        <box size="1.0 0.1 0.02"/>
-      </geometry>
-    </collision>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 -0.5 0"/>
-      <geometry>
-        <box size="1.0 0.1 0.02"/>
-      </geometry>
-      <material name="stripe_red"/>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 -0.5 0"/>
-      <geometry>
-        <box size="1.0 0.1 0.02"/>
+        <box size="1.2 1.2 0.02"/>
       </geometry>
     </collision>
   </link>

@@ -70,12 +70,9 @@ class PayloadEnv(object):
         self.pybullet.resetBasePositionAndOrientation(self.robot_id, start_pos, start_orientation)
         self.pybullet.resetBaseVelocity(self.robot_id, [0, 0, 0], [0, 0, 0])
 
-        # 3. Generate a Random CoG Shift (between -15cm and +15cm)
-        # We only shift X and Y. Z stays slightly elevated to sit on the frame.
-        # x_shift = np.random.uniform(-0.2, 0.2)
-        # y_shift = np.random.uniform(-0.2, 0.2)
-        x_shift = 0.15
-        y_shift = 0.15
+        # 3. CoG Shift (between -15cm and +15cm)
+        x_shift = 0.1
+        y_shift = 0.1
         self.payload_offset = [x_shift, y_shift, 0.05]
 
         # 4. Re-spawn the red box
