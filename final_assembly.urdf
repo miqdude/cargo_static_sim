@@ -26,67 +26,15 @@
       </geometry>
     </collision>
   </link>
-  <!-- <joint name="pendulum_roll_joint" type="continuous">
-    <parent link="connecting_stripes"/>
-    <child link="pendulum_dummy_link"/>
-    <origin rpy="0 0 0" xyz="0 0 -0.05"/>
-    <axis xyz="1 0 0"/>
-    <dynamics damping="0.001" friction="0.0"/>
-  </joint>
-  <link name="pendulum_dummy_link">
-    <inertial>
-      <mass value="0.001"/>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
-    </inertial>
-  </link>
-  <joint name="pendulum_pitch_joint" type="continuous">
-    <parent link="pendulum_dummy_link"/>
-    <child link="pendulum_rod"/>
-    <origin rpy="0 0 0" xyz="0 0 0"/>
-    <axis xyz="0 1 0"/>
-    <dynamics damping="0.001" friction="0.0"/>
-  </joint>
-  <link name="pendulum_rod">
-    <inertial>
-      <mass value="0.2"/>
-      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
-      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.0001"/>
-    </inertial>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.4"/>
-      <geometry>
-        <cylinder length="0.8" radius="0.01"/>
-      </geometry>
-      <material name="silver">
-        <color rgba="0.8 0.8 0.8 1"/>
-      </material>
-    </visual>
-  </link>
-  <joint name="payload_fixed_joint" type="fixed">
-    <parent link="pendulum_rod"/>
-    <child link="payload_mass"/>
-    <origin rpy="0 0 0" xyz="0 0 -0.8"/>
-  </joint>
-  <link name="payload_mass">
-    <inertial>
-      <mass value="1.0"/>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
-    </inertial>
-    <visual>
-      <geometry>
-        <sphere radius="0.1"/>
-      </geometry>
-      <material name="payload_color">
-        <color rgba="0.2 0.2 0.8 1"/>
-      </material>
-    </visual>
-  </link> -->
+
+  <!-- ========================================== -->
+  <!-- ARM 1 (Top-Right, Tilted inward on X)      -->
+  <!-- ========================================== -->
   <joint name="iris_1_mount_joint" type="fixed">
     <parent link="connecting_stripes"/>
     <child link="iris_1/base_link"/>
-    <origin rpy="0 0 0" xyz="0.5 0.5 0"/>
+    <!-- 11 degrees = 0.192 radians. Pitched inward towards center (-X) -->
+    <origin rpy="0 -0.192 0" xyz="0.5 0.5 0"/>
   </joint>
   <link name="iris_1/base_link">
     <inertial>
@@ -186,10 +134,15 @@
       <material name="red"/>
     </visual>
   </link>
+
+  <!-- ========================================== -->
+  <!-- ARM 2 (Bottom-Right, Tilted inward on X)   -->
+  <!-- ========================================== -->
   <joint name="iris_2_mount_joint" type="fixed">
     <parent link="connecting_stripes"/>
     <child link="iris_2/base_link"/>
-    <origin rpy="0 0 0" xyz="0.5 -0.5 0"/>
+    <!-- Pitched inward towards center (-X) -->
+    <origin rpy="0 -0.192 0" xyz="0.5 -0.5 0"/>
   </joint>
   <link name="iris_2/base_link">
     <inertial>
@@ -289,10 +242,15 @@
       <material name="red"/>
     </visual>
   </link>
+
+  <!-- ========================================== -->
+  <!-- ARM 3 (Top-Left, Tilted inward on X)       -->
+  <!-- ========================================== -->
   <joint name="iris_3_mount_joint" type="fixed">
     <parent link="connecting_stripes"/>
     <child link="iris_3/base_link"/>
-    <origin rpy="0 0 0" xyz="-0.5 0.5 0"/>
+    <!-- Pitched inward towards center (+X) -->
+    <origin rpy="0 0.192 0" xyz="-0.5 0.5 0"/>
   </joint>
   <link name="iris_3/base_link">
     <inertial>
@@ -392,10 +350,15 @@
       <material name="red"/>
     </visual>
   </link>
+
+  <!-- ========================================== -->
+  <!-- ARM 4 (Bottom-Left, Tilted inward on X)    -->
+  <!-- ========================================== -->
   <joint name="iris_4_mount_joint" type="fixed">
     <parent link="connecting_stripes"/>
     <child link="iris_4/base_link"/>
-    <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
+    <!-- Pitched inward towards center (+X) -->
+    <origin rpy="0 0.192 0" xyz="-0.5 -0.5 0"/>
   </joint>
   <link name="iris_4/base_link">
     <inertial>
@@ -495,112 +458,4 @@
       <material name="red"/>
     </visual>
   </link>
-  <!-- <joint name="leg_fr_joint" type="fixed">
-    <parent link="connecting_stripes"/>
-    <child link="leg_fr_link"/>
-    <origin rpy="0 0 0" xyz="0.5 0.5 0"/>
-  </joint>
-  <link name="leg_fr_link">
-    <inertial>
-      <mass value="0.1"/>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <inertia ixx="0.008" ixy="0" ixz="0" iyy="0.008" iyz="0" izz="0.00002"/>
-    </inertial>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-      <material name="dark_grey">
-        <color rgba="0.2 0.2 0.2 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-    </collision>
-  </link>
-  <joint name="leg_fl_joint" type="fixed">
-    <parent link="connecting_stripes"/>
-    <child link="leg_fl_link"/>
-    <origin rpy="0 0 0" xyz="0.5 -0.5 0"/>
-  </joint>
-  <link name="leg_fl_link">
-    <inertial>
-      <mass value="0.1"/>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <inertia ixx="0.008" ixy="0" ixz="0" iyy="0.008" iyz="0" izz="0.00002"/>
-    </inertial>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-      <material name="dark_grey">
-        <color rgba="0.2 0.2 0.2 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-    </collision>
-  </link>
-  <joint name="leg_bl_joint" type="fixed">
-    <parent link="connecting_stripes"/>
-    <child link="leg_bl_link"/>
-    <origin rpy="0 0 0" xyz="-0.5 0.5 0"/>
-  </joint>
-  <link name="leg_bl_link">
-    <inertial>
-      <mass value="0.1"/>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <inertia ixx="0.008" ixy="0" ixz="0" iyy="0.008" iyz="0" izz="0.00002"/>
-    </inertial>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-      <material name="dark_grey">
-        <color rgba="0.2 0.2 0.2 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-    </collision>
-  </link>
-  <joint name="leg_br_joint" type="fixed">
-    <parent link="connecting_stripes"/>
-    <child link="leg_br_link"/>
-    <origin rpy="0 0 0" xyz="-0.5 -0.5 0"/>
-  </joint>
-  <link name="leg_br_link">
-    <inertial>
-      <mass value="0.1"/>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <inertia ixx="0.008" ixy="0" ixz="0" iyy="0.008" iyz="0" izz="0.00002"/>
-    </inertial>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-      <material name="dark_grey">
-        <color rgba="0.2 0.2 0.2 1"/>
-      </material>
-    </visual>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0 -0.5"/>
-      <geometry>
-        <cylinder length="1.0" radius="0.015"/>
-      </geometry>
-    </collision>
-  </link> -->
 </robot>

@@ -6,6 +6,7 @@ import numpy as np
 
 from mellinger_control import MellingerControl
 from geometric_control import GeometricControl
+from tilted_control import TestController
 
 from waypoint import WaypointManager
 from utils import get_trajectory, calculate_payload_offset
@@ -18,7 +19,7 @@ PAYLOAD_MASS = 1.0  # Assumed static payload since PINN is removed
 TOTAL_MASS = FRAME_MASS + PAYLOAD_MASS
 RATE_HZ = 240.0
 TIME_STEP = 1.0 / RATE_HZ
-TRAJECTORY_PATH = "hover_rotate"
+TRAJECTORY_PATH = "figure8"
 
 def main():
     context = zmq.Context()
@@ -48,30 +49,6 @@ def main():
         [0.0, 0.0, 7.0],  
     ]
 
-    # # 1. Initial Takeoff Waypoint
-    # mission_waypoints = [
-    #     [0.0, 0.0, 7.0], 
-    # ]
-
-    # # 2. Dynamically Generate Figure 8 Waypoints
-    # num_points = 30
-    # scale = 5.0       # How wide the figure 8 is in meters
-    # altitude = 7.0    # Flight height
-
-    # for i in range(num_points):
-    #     # t goes from 0 to 2*PI
-    #     t = (i / num_points) * (2 * np.pi)
-        
-    #     # Parametric math for a Figure 8 pattern
-    #     x = scale * np.sin(t)
-    #     y = scale * np.sin(t) * np.cos(t)
-    #     z = altitude
-        
-    #     mission_waypoints.append([float(x), float(y), float(z)])
-
-    # # 3. (Optional) Add a final waypoint to return to center and hover
-    # mission_waypoints.append([0.0, 0.0, 7.0])
-
     mission_waypoints = [
         [0.0, 0.0, 5.0],   # Takeoff straight up 5 meters
         [5.0, 0.0, 5.0],   # Move 5 meters forward
@@ -82,8 +59,9 @@ def main():
 
     # Initialize the controllers
     waypoint_manager = WaypointManager(mission_waypoints, acceptance_radius=0.3, max_speed=2.0)
-    controller = GeometricControl(mass_total=TOTAL_MASS)
+    # controller = GeometricControl(mass_total=TOTAL_MASS)
     # controller = GeometricControl(TOTAL_MASS)
+    controller = TestController(TOTAL_MASS)
 
     print("Controller Started...")
     print("(Press Ctrl+C to stop).")
@@ -142,17 +120,6 @@ def main():
                 vel_np = np.array([vel['x'], vel['y'], vel['z']])
                 rot_np = np.array([rot['x'], rot['y'], rot['z']])
                 ang_vel_np = np.array([ang_vel['x'], ang_vel['y'], ang_vel['z']])
-
-                # =========================================================
-                # TRAJECTORY GENERATION
-                # =========================================================
-                # using waypoints
-                # target_pos, target_vel, target_acc, target_rpy, target_ang_vel = waypoint_manager.get_target_state(
-                #     pos_np, time_delta
-                # )
-
-                # Ensure yaw is scalar
-                # target_yaw_scalar = target_rpy[2] if isinstance(target_rpy, (list, np.ndarray)) else target_rpy
 
                 # using trajectory generation
                 target_pos, target_vel, target_acc, target_rpy, target_ang_vel = get_trajectory(time_now, TRAJECTORY_PATH)

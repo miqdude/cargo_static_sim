@@ -15,7 +15,7 @@ from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 
 from mellinger_control import MellingerControl
-from payload_env import PayloadEnv
+from simulation import Simulation
 from utils import get_trajectory, calculate_true_principal_inertia
 
 from topics import TOPIC_COMMANDS, TOPIC_TELEMETRY, TOPIC_ESTIMATION
@@ -34,7 +34,7 @@ MAX_DRONE_THRUST = 50
 TOTAL_SYSTEM_MASS = 7.8
 FRAME_MASS = 6.8
 PAYLOAD_MASS = 1.0
-WIND_DISTURBANCE = False
+WIND_DISTURBANCE = True
 ENABLE_PAYLOAD = False
 PATH_TRAJECTORY = "hover_rotate"
 
@@ -70,7 +70,7 @@ p.loadURDF("plane.urdf")
 # Initialize the Controller
 leader = MellingerControl(mass_total=TOTAL_SYSTEM_MASS)
 
-env = PayloadEnv(args.f, args.fl, leader, p, ENABLE_PAYLOAD,
+sim = Simulation(args.f, args.fl, leader, p, ENABLE_PAYLOAD,
                 GRAVITY_MSS, drone_max_thrust=MAX_DRONE_THRUST)
 
 print("="*50)
@@ -157,7 +157,7 @@ try:
         print("*"*36)
         print(f"{curr_episode}-th EPISODE IS STARTING")
         
-        true_offset, true_mass = env.reset()
+        true_offset, true_mass = sim.reset()
         print(f"True CoG Anomaly at: X={true_offset[0]:.3f}, Y={true_offset[1]:.3f}")
 
         time_now = 0.0
@@ -207,7 +207,7 @@ try:
                 # Update the guessed mass since it will affect the dynamics
                 latest_est["estimated_mass"] = data_["estimated_mass"]
                 
-            pos, current_rpy, current_vel, current_ang_vel = env.step(
+            pos, current_rpy, current_vel, current_ang_vel = sim.step(
                 thrust_commands,
                 torque_commands,
                 WIND_DISTURBANCE,

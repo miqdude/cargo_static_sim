@@ -3,7 +3,7 @@ import numpy as np
 
 from quadrotor import Quadrotor
 
-class PayloadEnv(object):
+class Simulation(object):
     def __init__(self, urdf_path, virtual_leader_urf_path, leader, p,
                 add_payload = True,
                 gravity_mss = 9.81, enable_wind_dist = False, debug = False, drone_max_thrust = 25):
@@ -184,7 +184,7 @@ class PayloadEnv(object):
 
         # Apply wind disturbance
         # Wind disturbance force settings
-        wind_base = np.array([0.1, 0.0, 0.0])
+        wind_base = np.array([100.0, 0.0, 0.0])
 
         # wind_gust = np.array([
         #     np.sin(sim_time * 1.5) * 3.0,  # Swirling X gust
@@ -198,12 +198,14 @@ class PayloadEnv(object):
         # Calculate Total Distrubance Force (Newtons)
         total_wind_force = wind_base
 
+        current_pos, _ = self.pybullet.getBasePositionAndOrientation(self.robot_id)
+
         if  apply_wind_dist:
             self.pybullet.applyExternalForce(
                 objectUniqueId=self.robot_id,  
                 linkIndex=-1,                  
                 forceObj=total_wind_force.tolist(),
-                posObj=[0.0, 0.0, 0.0], # Apply slightly off-center to induce aerodynamic torque!
+                posObj=current_pos, # apply right at the center of vehicle
                 flags=self.pybullet.WORLD_FRAME            
             )
              
